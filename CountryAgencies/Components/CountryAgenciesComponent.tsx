@@ -1,7 +1,7 @@
 import {
     Dropdown, Icon, PrimaryButton,
     Spinner, SpinnerSize, Modal,
-    IDropdownOption
+    IDropdownOption, Label
 } from '@fluentui/react'
 import * as React from 'react'
 import "../Styles/CountryAgencies.scss"
@@ -12,12 +12,8 @@ export interface IFormData {
     "country": string;
     "countryContacts": string[];
     "countryContact": string;
-    "ea": string;
-    "eaContacts": string[];
-    "eaContact": string;
-    "ia": string;
-    "iaContact": string;
-    "iaContacts": string[];
+    "iaGroup": object[];
+    "eaGroup": object[];
 }
 const CountryAgenciesComponent = () => {
     const [recordid, setrecordid] = React.useState<any>(getRequest.recordid)
@@ -30,7 +26,6 @@ const CountryAgenciesComponent = () => {
     const [detailsShown, setDetailsShown] = React.useState<any>(false);
     const [countryDetail, setCountryDetail] = React.useState<any>([]);
 
-
     const addFormdData = () => {
         setDetailsShown(true)
         let existingData: IFormData[] = [...formData];
@@ -40,12 +35,20 @@ const CountryAgenciesComponent = () => {
                 country: "",
                 countryContacts: [],
                 countryContact: "",
-                ea: "",
-                eaContacts: [],
-                eaContact: "",
-                ia: "",
-                iaContact: "",
-                iaContacts: [],
+                eaGroup: [
+                    {
+                        ea: "",
+                        eaContact: "",
+                        eaContacts: [],
+                    }
+                ],
+                iaGroup: [
+                    {
+                        ia: "",
+                        iaContact: "",
+                        iaContacts: [],
+                    }
+                ]
             }
         )
         setFormData(existingData)
@@ -67,7 +70,6 @@ const CountryAgenciesComponent = () => {
             </div>
         );
     };
-
 
     const onChange = (type: string, item: IDropdownOption<string>, index: number): void => {
         if (item) {
@@ -109,6 +111,32 @@ const CountryAgenciesComponent = () => {
         }
     };
 
+    const onChangeAgency = (agencyGroup: string, type: string, item: IDropdownOption<string>, index: number, agencyIndex: number): void => {
+        if (item) {
+            let existingData = new Array();
+            existingData = [...formData]
+            existingData[index][agencyGroup][agencyIndex][type] = item.key;
+
+
+            if (type == "ea" || type == "ia") {
+                let arrayContainer = type == "ea" ? "eaContacts" : "iaContacts"
+                setLoading(true);
+                getRequest.getContacts(item.key).then((contacts: any) => {
+                    let childrenArr = new Array();
+                    contacts.forEach((contact: any) => {
+                        childrenArr.push({
+                            "key": contact.contactid,
+                            "text": contact.fullname,
+                        })
+                    })
+                    existingData[index][agencyGroup][agencyIndex][arrayContainer] = childrenArr;
+                    setLoading(false);
+                })
+            }
+            setFormData(existingData)
+        }
+    };
+
     const onRenderTitle = (options: any): JSX.Element => {
         const option = options[0];
 
@@ -130,12 +158,11 @@ const CountryAgenciesComponent = () => {
                 opportunityid: recordid,
                 country: data.country,
                 countryContact: data.countryContact,
-                ea: data.ea,
-                eaContact: data.eaContact,
-                ia: data.ia,
-                iaContact: data.iaContact,
+                eaGroup: data.eaGroup,
+                iaGroup: data.iaGroup
             })
         })
+        console.log("SIR ROMMS ITO PO YUNG BAGONG DATA NA ISSAVE", dataTosave);
         getRequest.saveAgencies(dataTosave).then(data => {
             getRequest.getCountryDetils(recordid).then(data => {
                 let countryDetails = new Array();
@@ -153,6 +180,32 @@ const CountryAgenciesComponent = () => {
                 setSubmitting(false)
             })
         })
+    }
+
+    const addNestedItem = (type: any, index: any) => {
+        let existingData = new Array();
+        existingData = [...formData]
+        existingData[index][type].push(
+            type == "eaGroup" ?
+                {
+                    ea: "",
+                    eaContact: "",
+                }
+                :
+                {
+                    ia: "",
+                    iaContact: "",
+                }
+        )
+
+        setFormData(existingData);
+    }
+
+    const removeNestedItem = (type: any, index: number, nestedIndex: number) => {
+        let existingData = new Array();
+        existingData = [...formData]
+        existingData[index][type].splice(nestedIndex, 1)
+        setFormData(existingData);
     }
 
     React.useEffect(() => {
@@ -196,7 +249,6 @@ const CountryAgenciesComponent = () => {
             })
         })
     }, [])
-
     return (
         recordid != "" ?
             <div className='Main'>
@@ -243,14 +295,32 @@ const CountryAgenciesComponent = () => {
                                         {
                                             data.country != "" ?
                                                 <>
-                                                    <div className='input-group'>
-                                                        <Dropdown onChange={(e: any, v: any) => onChange("ea", v, index)} selectedKey={data.ea} label="EA" placeholder={loadingChild ? "Fetching data" : "Select EA"} options={data.children} />
-                                                        <Dropdown onChange={(e: any, v: any) => onChange("eaContact", v, index)} selectedKey={data.eaContact} label="Contact" placeholder={loading ? "Fetching data" : "Select Contact"} options={data.eaContacts} disabled={data.ea == ""} />
+                                                    <div onClick={() => addNestedItem("eaGroup", index)} className='add-button'>
+                                                        <Label>Executing Agency</Label>
+                                                        <Icon iconName='AddTo' />
                                                     </div>
-                                                    <div className='input-group'>
-                                                        <Dropdown onChange={(e: any, v: any) => onChange("ia", v, index)} selectedKey={data.ia} label="IA" placeholder={loadingChild ? "Fetching data" : "Select IA"} options={data.children} />
-                                                        <Dropdown onChange={(e: any, v: any) => onChange("iaContact", v, index)} selectedKey={data.iaContact} label="Contact" placeholder={loading ? "Fetching data" : "Select Contact"} options={data.iaContacts} disabled={data.ia == ""} />
+                                                    {
+                                                        data.eaGroup.map((ea: any, eaIndex: number) =>
+                                                            <div className='input-group'>
+                                                                <Dropdown onChange={(e: any, v: any) => onChangeAgency("eaGroup", "ea", v, index, eaIndex)} selectedKey={ea.ea} placeholder={loadingChild ? "Fetching data" : "Select EA"} options={data.children} />
+                                                                <Dropdown onChange={(e: any, v: any) => onChangeAgency("eaGroup", "eaContact", v, index, eaIndex)} selectedKey={ea.eaContact} placeholder={loading ? "Fetching data" : "Select Contact"} options={ea.eaContacts} disabled={ea.ea == ""} />
+                                                                <Icon iconName='ErrorBadge' onClick={() => removeNestedItem("eaGroup", index, eaIndex)} />
+                                                            </div>
+                                                        )
+                                                    }
+                                                    <div onClick={() => addNestedItem("iaGroup", index)} className='add-button'>
+                                                        <Label>Implementing Agency</Label>
+                                                        <Icon iconName='AddTo' />
                                                     </div>
+                                                    {
+                                                        data.iaGroup.map((ia: any, iaIndex: number) =>
+                                                            <div className='input-group'>
+                                                                <Dropdown onChange={(e: any, v: any) => onChangeAgency("iaGroup", "ia", v, index, iaIndex)} selectedKey={ia.ia} placeholder={loadingChild ? "Fetching data" : "Select IA"} options={data.children} />
+                                                                <Dropdown onChange={(e: any, v: any) => onChangeAgency("iaGroup", "iaContact", v, index, iaIndex)} selectedKey={ia.iaContact} placeholder={loading ? "Fetching data" : "Select Contact"} options={ia.iaContacts} disabled={ia.ia == ""} />
+                                                                <Icon iconName='ErrorBadge' onClick={() => removeNestedItem("iaGroup", index, iaIndex)} />
+                                                            </div>
+                                                        )
+                                                    }
                                                 </>
                                                 :
                                                 <></>

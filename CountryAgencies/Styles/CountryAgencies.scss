@@ -19,9 +19,10 @@ body {
             display: flex;
             align-items: center;
             cursor: pointer;
+            width: fit-content;
 
             i {
-                font-size: 40px;
+                font-size: 20px;
                 font-weight: 800;
                 margin-right: 10px;
             }
@@ -50,9 +51,17 @@ body {
                 display: flex;
                 width: 100%;
                 gap: 5px;
+                align-items: center;
+                margin-bottom: 5px;
+
 
                 .ms-Dropdown-container {
                     width: 100%;
+                }
+
+                [data-icon-name="ErrorBadge"] {
+                    color: #f15c5c;
+                    cursor: pointer;
                 }
             }
 
@@ -63,6 +72,27 @@ body {
                     color: red;
                     font-weight: 900;
                     cursor: pointer;
+                }
+            }
+
+            .add-button {
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                width: fit-content;
+
+                i {
+                    font-size: 15px;
+                    font-weight: 800;
+                    margin-left: 10px;
+                }
+
+                h1 {
+                    color: #8b8989;
+                }
+
+                h1:hover {
+                    text-decoration: underline;
                 }
             }
         }
