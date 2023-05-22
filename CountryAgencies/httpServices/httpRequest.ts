@@ -75,7 +75,7 @@ export default class httpRequest {
     return resuldata
   }
 
-  public async getCountryDetils(id: any) {
+  public async getCountryDetails(id: any) {
     const url = `https://opportunityfn20230417193246.azurewebsites.net/api/QueryOpportunityAccountLinks?code=W7XchdqsOibO_pB2vq4GXS_qcIsmuGqi5xDdq3R_7mtUAzFuLIjsfg==&opportunityid=${id}`;
 
     const response = await axios({

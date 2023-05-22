@@ -1,7 +1,7 @@
 import {
     Dropdown, Icon, PrimaryButton,
     Spinner, SpinnerSize, Modal,
-    IDropdownOption, Label
+    IDropdownOption, Label, ComboBox, IComboBoxOption
 } from '@fluentui/react'
 import * as React from 'react'
 import "../Styles/CountryAgencies.scss"
@@ -25,6 +25,8 @@ const CountryAgenciesComponent = () => {
     const [submitting, setSubmitting] = React.useState<any>(false);
     const [detailsShown, setDetailsShown] = React.useState<any>(false);
     const [countryDetail, setCountryDetail] = React.useState<any>([]);
+    const [hasError, setHasError] = React.useState<any>(false);
+    const [errorMessage, setErrorMessage] = React.useState<any>("");
 
     const addFormdData = () => {
         setDetailsShown(true)
@@ -71,7 +73,9 @@ const CountryAgenciesComponent = () => {
         );
     };
 
-    const onChange = (type: string, item: IDropdownOption<string>, index: number): void => {
+    const onChange = (type: string, item: IComboBoxOption, index: number): void => {
+
+        console.log(item)
         if (item) {
             let existingData = new Array();
             existingData = [...formData]
@@ -153,33 +157,63 @@ const CountryAgenciesComponent = () => {
     const submit = () => {
         setSubmitting(true)
         let dataTosave = new Array();
+        let emptyEa = true;
+        let emptyIa = true;
         formData.map((data: any) => {
-            dataTosave.push({
-                opportunityid: recordid,
-                country: data.country,
-                countryContact: data.countryContact,
-                eaGroup: data.eaGroup,
-                iaGroup: data.iaGroup
-            })
-        })
-        console.log("SIR ROMMS ITO PO YUNG BAGONG DATA NA ISSAVE", dataTosave);
-        getRequest.saveAgencies(dataTosave).then(data => {
-            getRequest.getCountryDetils(recordid).then(data => {
-                let countryDetails = new Array();
-                data.details.forEach((detail: any) => {
-                    if (!detail.role.name.includes("Country")) {
-                        countryDetails.push({
-                            country: detail.country.name,
-                            name: detail.name.name,
-                            role: detail.role.name,
-                            contact: detail.contact.name,
-                        })
+            if (data.country != "") {
+                data.eaGroup.forEach((ea: any) => {
+                    if (ea.ea != "") {
+                        emptyEa = false;
                     }
                 })
-                setCountryDetail(countryDetails)
-                setSubmitting(false)
-            })
+                data.iaGroup.forEach((ia: any) => {
+                    if (ia.ia != "") {
+                        emptyIa = false;
+                    }
+                })
+                dataTosave.push({
+                    opportunityid: recordid,
+                    country: data.country,
+                    countryContact: data.countryContact,
+                    eaGroup: emptyEa ? [] : data.eaGroup,
+                    iaGroup: emptyIa ? [] : data.iaGroup
+                })
+            }
         })
+        console.log("SIR ROMMS ITO PO YUNG BAGONG DATA NA ISSAVE", dataTosave);
+        if (dataTosave.length > 0) {
+            getRequest.saveAgencies(dataTosave).then(data => {
+                // getRequest.getCountryDetails(recordid).then(data => {
+                //     let countryDetails = new Array();
+                //     data.details.forEach((detail: any) => {
+                //         if (!detail.role.name.includes("Country")) {
+                //             countryDetails.push({
+                //                 country: detail.country.name,
+                //                 name: detail.name.name,
+                //                 role: detail.role.name,
+                //                 contact: detail.contact.name,
+                //             })
+                //         }
+                //     })
+                //     setCountryDetail(countryDetails)
+                //     setSubmitting(false)
+                // }, (err) => {
+                //     setHasError(true);
+                //     setErrorMessage("Fetching Record Failed: " + err);
+                //     setSubmitting(false);
+                // })'
+                window.location.reload();
+            }, (err) => {
+                setHasError(true);
+                setErrorMessage("Saving Failed: " + err)
+                console.log("Saving Error: ", err)
+                setSubmitting(false);
+            })
+        } else {
+            setHasError(true);
+            setErrorMessage("No Data to save!")
+            setSubmitting(false);
+        }
     }
 
     const addNestedItem = (type: any, index: any) => {
@@ -223,8 +257,9 @@ const CountryAgenciesComponent = () => {
                     })
                 })
                 setCountries(countryArray)
-                if (recordid != "") {
-                    getRequest.getCountryDetils(recordid).then((data) => {
+                if (recordid != "val") {
+                    getRequest.getCountryDetails(recordid).then((data) => {
+                        console.log(data)
                         let countryDetails = new Array();
                         let existingData: IFormData[] = [...formData];
                         data.details.forEach((detail: any, index: number) => {
@@ -244,8 +279,20 @@ const CountryAgenciesComponent = () => {
                         setFormData(existingData);
                         setCountryDetail(countryDetails);
                         setLoadingCountries(false);
+                    }, (err) => {
+                        setHasError(true);
+                        setErrorMessage("Fetching Record Failed. Please check console for further details.");
+                        console.log("Fetching Record Error ", err)
+                        setSubmitting(false);
                     })
+                } else {
+                    setLoadingCountries(false);
                 }
+            }, (err) => {
+                setHasError(true);
+                setErrorMessage("Fetching Record Failed. Please check console for further details.");
+                console.log("Fetching Record Error", err)
+                setSubmitting(false);
             })
         })
     }, [])
@@ -281,16 +328,17 @@ const CountryAgenciesComponent = () => {
                             formData.length > 0 ?
                                 formData.map((data: any, index: number) =>
                                     <div className='country-form' key={index}>
-                                        <div className='remove-data'><Icon iconName='Delete' onClick={() => removeformData(index)} /></div>
                                         <div className='input-group'>
-                                            <Dropdown placeholder="Select country" options={countries}
-                                                onRenderTitle={onRenderTitle}
-                                                onRenderOption={onRenderOption}
+                                            <ComboBox placeholder="Select country" options={countries}
                                                 onChange={(e: any, v: any) => onChange("country", v, index)}
                                                 label="Country"
                                                 selectedKey={data.country}
+                                                allowFreeInput
+                                                autoComplete="on"
+
                                             />
                                             <Dropdown disabled={data.country == ""} onChange={(e: any, v: any) => onChange("countryContact", v, index)} selectedKey={data.countryContact} label="Contact" placeholder={loading ? "Fetching data" : "Select Contact"} options={data.countryContacts} />
+                                            <div className='remove-data'><Icon iconName='Delete' onClick={() => removeformData(index)} /></div>
                                         </div>
                                         {
                                             data.country != "" ?
@@ -304,7 +352,7 @@ const CountryAgenciesComponent = () => {
                                                             <div className='input-group'>
                                                                 <Dropdown onChange={(e: any, v: any) => onChangeAgency("eaGroup", "ea", v, index, eaIndex)} selectedKey={ea.ea} placeholder={loadingChild ? "Fetching data" : "Select EA"} options={data.children} />
                                                                 <Dropdown onChange={(e: any, v: any) => onChangeAgency("eaGroup", "eaContact", v, index, eaIndex)} selectedKey={ea.eaContact} placeholder={loading ? "Fetching data" : "Select Contact"} options={ea.eaContacts} disabled={ea.ea == ""} />
-                                                                <Icon iconName='ErrorBadge' onClick={() => removeNestedItem("eaGroup", index, eaIndex)} />
+                                                                <div className='remove-data'><Icon iconName='ErrorBadge' onClick={() => removeNestedItem("eaGroup", index, eaIndex)} /></div>
                                                             </div>
                                                         )
                                                     }
@@ -317,7 +365,7 @@ const CountryAgenciesComponent = () => {
                                                             <div className='input-group'>
                                                                 <Dropdown onChange={(e: any, v: any) => onChangeAgency("iaGroup", "ia", v, index, iaIndex)} selectedKey={ia.ia} placeholder={loadingChild ? "Fetching data" : "Select IA"} options={data.children} />
                                                                 <Dropdown onChange={(e: any, v: any) => onChangeAgency("iaGroup", "iaContact", v, index, iaIndex)} selectedKey={ia.iaContact} placeholder={loading ? "Fetching data" : "Select Contact"} options={ia.iaContacts} disabled={ia.ia == ""} />
-                                                                <Icon iconName='ErrorBadge' onClick={() => removeNestedItem("iaGroup", index, iaIndex)} />
+                                                                <div className='remove-data'><Icon iconName='ErrorBadge' onClick={() => removeNestedItem("iaGroup", index, iaIndex)} /></div>
                                                             </div>
                                                         )
                                                     }
@@ -338,6 +386,11 @@ const CountryAgenciesComponent = () => {
                     <div className='loader'>
                         <Spinner size={SpinnerSize.large} />
                         Saving Details
+                    </div>
+                </Modal>
+                <Modal containerClassName='error-container' isOpen={hasError} onDismiss={() => setHasError(false)}>
+                    <div className='error-message'>
+                        {errorMessage}
                     </div>
                 </Modal>
             </div>
